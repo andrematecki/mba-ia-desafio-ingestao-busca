@@ -77,7 +77,7 @@ def ingest_pdf():
 
 
     embeddings = OpenAIEmbeddings(
-        model=os.getenv("OPENAI_MODEL")
+        model=os.getenv("OPENAI_EMBEDDING_MODEL")
     )
 
     store = PGVector(
