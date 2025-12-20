@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -8,52 +9,19 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 from langchain_postgres import PGVector
 
+from helper import Helper
+
 
 load_dotenv()
 def get_pdf_path():
     base_dir = Path(__file__).resolve().parent
     return base_dir.parent / os.getenv("PDF_PATH")
 
-def validate_env_vars():
-    """
-    Valida a presença de variáveis de ambiente obrigatórias.
-    
-    Verifica se todas as variáveis de ambiente necessárias para a execução
-    da aplicação estão definidas no sistema.
-    
-    Variáveis obrigatórias:
-        - OPENAI_API_KEY: Chave de API do OpenAI
-        - DATABASE_URL: URL de conexão com o banco de dados
-        - PG_VECTOR_COLLECTION_NAME: Nome da coleção no banco de dados vetorial
-        - PDF_PATH: Caminho para o arquivo ou diretório de PDFs
-    
-    Raises:
-        EnvironmentError: Se uma ou mais variáveis de ambiente obrigatórias
-                         não estiverem definidas. A mensagem de erro lista
-                         todas as variáveis ausentes.
-    
-    Returns:
-        None
-    
-    Examples:
-        >>> validate_env_vars()  # Executa sem erro se todas as variáveis estão definidas
-        
-        >>> validate_env_vars()  # Levanta EnvironmentError se alguma estiver faltando
-        EnvironmentError: Variáveis de ambiente ausentes: OPENAI_API_KEY, DATABASE_URL
-    """
-    required_vars = [
-        "OPENAI_API_KEY",
-        "DATABASE_URL",
-        "PG_VECTOR_COLLECTION_NAME",
-        "PDF_PATH"
-    ]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    if missing_vars:
-        raise EnvironmentError(f"Variáveis de ambiente ausentes: {', '.join(missing_vars)}")
-    pass
+PDF_PATH = get_pdf_path()
+
 
 def ingest_pdf():
-    validate_env_vars()
+    logger = logging.getLogger(__name__)
     
     loader = PyPDFLoader(str(PDF_PATH))
     documents = loader.load()
@@ -61,6 +29,7 @@ def ingest_pdf():
         chunk_size=1000, chunk_overlap=150, add_start_index=False
     )
     parts = splitter.split_documents(documents)
+    logger.info("Split em chunks realizado. Número de chunks: %d", len(parts))
     if not parts:
         print("Nenhum chunk foi criado a partir do PDF.")
         raise SystemExit(0)
@@ -72,13 +41,15 @@ def ingest_pdf():
         )
         for part in parts
     ]
+    logger.info("Enriquecimento dos chunks concluído. Total enriquecidos: %d", len(enriched_parts))
     
     ids = [f"doc-{i}" for i in range(len(enriched_parts))]
-
+    logger.info("IDs preparados para persistência. Ex.: %s. Total de ids: %d", ids[:5], len(ids))
 
     embeddings = OpenAIEmbeddings(
         model=os.getenv("OPENAI_EMBEDDING_MODEL")
     )
+    logger.info("Inicializando embeddings com modelo: %s", embeddings.model)
 
     store = PGVector(
         embeddings=embeddings,
@@ -86,16 +57,17 @@ def ingest_pdf():
         connection=os.getenv("DATABASE_URL"),
         use_jsonb=True
     )
+    logger.info("Instância PGVector criada (collection=%s).", os.getenv("PG_VECTOR_COLLECTION_NAME"))
+
 
     store.add_documents(documents=enriched_parts, ids=ids)
+    logger.info("Persistidos %d documentos no PGVector (collection=%s).", len(enriched_parts), os.getenv("PG_VECTOR_COLLECTION_NAME"))
 
-    print(f"Total de partes criadas: {len(parts)}\n")
+    logger.info("Ingestão concluída com sucesso. Total de partes criadas: %d", len(parts))
 
-    # for part in enriched_parts:
-    #     print(part.page_content)
-    #     print("-"*30)
-     
-PDF_PATH = get_pdf_path()
+    
 
 if __name__ == "__main__":
+    Helper.configura_logging()
+    Helper.valida_env_vars()
     ingest_pdf()

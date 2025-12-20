@@ -1,9 +1,12 @@
+import logging
 import os
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_postgres import PGVector  
+
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 PROMPT_TEMPLATE = """
 CONTEXTO:
@@ -39,7 +42,8 @@ def search_prompt(question=None):
     )
 
     if (question is not None):
-      most_relevant_content = search_most_relevant_content(question, 10)  # Assume this function 
+      most_relevant_content = search_most_relevant_content(question, 10)  
+      logger.debug("Conteúdo mais relevante recuperado para a pergunta.")
       text = template.format(pergunta=question, contexto=most_relevant_content)
       return text
     

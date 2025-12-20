@@ -27,7 +27,7 @@ pip install -r requirements.txt
 docker compose up -d
 ```
 
-2. Executar ingestão do PDF (somente primeira vez):
+2. Executar ingestão do PDF (somente primeira vez que for executar - vetorização do PDF):
 
 ```shell
 python src/ingest.py
@@ -37,3 +37,7 @@ python src/ingest.py
 ```shell
 python src/chat.py
 ```
+
+## Limitações do chat
+
+- Não guarda memoria
