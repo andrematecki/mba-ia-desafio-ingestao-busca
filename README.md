@@ -27,7 +27,7 @@ pip install -r requirements.txt
 docker compose up -d
 ```
 
-2. Executar ingestão do PDF:
+2. Executar ingestão do PDF (somente primeira vez):
 
 ```shell
 python src/ingest.py
