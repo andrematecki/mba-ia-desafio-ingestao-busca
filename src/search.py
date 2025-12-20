@@ -79,7 +79,7 @@ def search_prompt(question=None):
     )
 
     if (question is not None):
-      most_relevant_content = search_most_relevant_content(question)  # Assume this function 
+      most_relevant_content = search_most_relevant_content(question, 10)  # Assume this function 
       text = template.format(pergunta=question, contexto=most_relevant_content)
       return text
     
